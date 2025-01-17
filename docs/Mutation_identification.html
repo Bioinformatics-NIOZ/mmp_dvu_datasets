@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>MMP and DVU RNA-Seq analysis</title>
+<title>Mutation Identification</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -3097,19 +3097,10 @@ color: rgb(100, 100, 255);
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#libraries" id="toc-libraries" class="nav-link active" data-scroll-target="#libraries">Libraries</a></li>
-  <li><a href="#quality-filter-and-adapter-trimming" id="toc-quality-filter-and-adapter-trimming" class="nav-link" data-scroll-target="#quality-filter-and-adapter-trimming">Quality filter and adapter trimming</a></li>
-  <li><a href="#rna-seq-mapping" id="toc-rna-seq-mapping" class="nav-link" data-scroll-target="#rna-seq-mapping">RNA Seq mapping</a>
-  <ul class="collapse">
-  <li><a href="#download-assemblies" id="toc-download-assemblies" class="nav-link" data-scroll-target="#download-assemblies">Download assemblies</a></li>
-  <li><a href="#index-genomes." id="toc-index-genomes." class="nav-link" data-scroll-target="#index-genomes.">Index genomes.</a></li>
-  <li><a href="#mapping-the-reads" id="toc-mapping-the-reads" class="nav-link" data-scroll-target="#mapping-the-reads">Mapping the reads</a></li>
-  <li><a href="#data-normalization" id="toc-data-normalization" class="nav-link" data-scroll-target="#data-normalization">Data Normalization</a></li>
-  <li><a href="#create-new-index-for-the-intergenic-regions" id="toc-create-new-index-for-the-intergenic-regions" class="nav-link" data-scroll-target="#create-new-index-for-the-intergenic-regions">Create new index for the intergenic regions:</a></li>
-  <li><a href="#map-intergenic-regions-with-star" id="toc-map-intergenic-regions-with-star" class="nav-link" data-scroll-target="#map-intergenic-regions-with-star">Map intergenic regions with STAR</a></li>
-  </ul></li>
-  <li><a href="#diferential-expression-analysis" id="toc-diferential-expression-analysis" class="nav-link" data-scroll-target="#diferential-expression-analysis">Diferential expression analysis</a></li>
-  <li><a href="#session-info-and-details." id="toc-session-info-and-details." class="nav-link" data-scroll-target="#session-info-and-details.">Session info and details.</a></li>
+  <li><a href="#index-genomes-with-bwa" id="toc-index-genomes-with-bwa" class="nav-link active" data-scroll-target="#index-genomes-with-bwa">Index genomes with bwa</a></li>
+  <li><a href="#prepare-fastq-files-for-variant-analysis" id="toc-prepare-fastq-files-for-variant-analysis" class="nav-link" data-scroll-target="#prepare-fastq-files-for-variant-analysis">Prepare FastQ files for Variant analysis</a></li>
+  <li><a href="#quickvariant-analysis" id="toc-quickvariant-analysis" class="nav-link" data-scroll-target="#quickvariant-analysis">QuickVariant analysis</a></li>
+  <li><a href="#variant-annotation" id="toc-variant-annotation" class="nav-link" data-scroll-target="#variant-annotation">Variant annotation</a></li>
   </ul>
 </nav>
 </div>
@@ -3119,7 +3110,7 @@ color: rgb(100, 100, 255);
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">MMP and DVU RNA-Seq analysis</h1>
+<h1 class="title">Mutation Identification</h1>
 </div>
 
 
@@ -3136,517 +3127,159 @@ color: rgb(100, 100, 255);
 </header>
 
 
-<section id="libraries" class="level2">
-<h2 class="anchored" data-anchor-id="libraries">Libraries</h2>
-<p>Install R libraries if required</p>
+<section id="index-genomes-with-bwa" class="level2">
+<h2 class="anchored" data-anchor-id="index-genomes-with-bwa">Index genomes with bwa</h2>
+<p>Create bwa index for the target genomes:</p>
+<ul>
+<li>M. maripaludis S2 (NCBI RefSeq assembly: GCF_000011585.1) (<em>mmp</em>)</li>
+<li>N. vulgaris str. Hildenborough (NCBI RefSeq assembly: GCF_000195755.1)(<em>dvu</em>)</li>
+</ul>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">&quot;BiocManager&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>))</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">install.packages</span>(<span class="st">&quot;BiocManager&quot;</span>)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>BiocManager<span class="sc">::</span><span class="fu">install</span>(<span class="st">&quot;DESeq2&quot;</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>BiocManager<span class="sc">::</span><span class="fu">install</span>(<span class="st">&quot;tximport&quot;</span>)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;pheatmap&quot;</span>)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;DESeq2&quot;</span>)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;tximport&quot;</span>)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;pheatmap&quot;</span>)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;apeglm&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#mmp</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>bwa index <span class="sc">-</span>a bwtsw  GCF_000011585<span class="fl">.1</span>_ASM1158v1_genomic.fna</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#dvu</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>bwa index <span class="sc">-</span>a bwtsw  GCF_000195755<span class="fl">.1</span>_ASM19575v1_genomic.fna</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
-<section id="quality-filter-and-adapter-trimming" class="level2">
-<h2 class="anchored" data-anchor-id="quality-filter-and-adapter-trimming">Quality filter and adapter trimming</h2>
-<p>Reads were quality filtered and adapters trimmed using trimmomatic v0.38</p>
+<section id="prepare-fastq-files-for-variant-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="prepare-fastq-files-for-variant-analysis">Prepare FastQ files for Variant analysis</h2>
+<p>To prepare FastQ files for variant analysis we followed GATK4 best practices.</p>
+<p>For doing this, first we needed to create a sequence dictionary:</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file <span class="kw">in</span> Data/RawData/<span class="pp">*</span>.fastq.gz<span class="kw">;</span> <span class="cf">do</span> </span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">sample</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $NF}&#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f1</span> <span class="at">-d</span><span class="st">&quot;.&quot;</span><span class="va">)</span><span class="kw">;</span> </span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">r2</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/_R1/_R2/&#39;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">java</span> <span class="at">-jar</span> /opt/biolinux/Trinity/trinity-plugins/Trimmomatic-0.38/trimmomatic.jar PE <span class="at">-phred33</span> <span class="dt">\</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="va">$file</span> <span class="va">$r2</span>   <span class="dt">\</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  Data/Operational/Trimmed_reads/<span class="va">$sample</span>.R1_paired.trimmed.fastq.gz <span class="dt">\</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  Data/Operational/Trimmed_reads/<span class="va">$sample</span>.R1_unpaired.trimmed.fastq.gz <span class="dt">\</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  Data/Operational/Trimmed_reads/<span class="va">$sample</span>.R2_paired.trimmed.fastq.gz <span class="dt">\</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  Data/Operational/Trimmed_reads/<span class="va">$sample</span>.R2_unpaired.trimmed.fastq.gz <span class="dt">\</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  ILLUMINACLIP:/opt/Downloads/biolinux/trimmomatic-0.38/adapters/TruSeq3-SE.fa:2:30:10 <span class="dt">\</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  LEADING:20 TRAILING:20 SLIDINGWINDOW:5:20 MINLEN:40 <span class="op">&amp;&gt;</span> Data/Operational/Trimmed_reads/<span class="va">$sample</span>.trim.log<span class="kw">;</span> </span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#mmp</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gatk</span>  CreateSequenceDictionary <span class="at">--REFERENCE</span> genomes/GCF_000011585.1_ASM1158v1_genomic.fna <span class="at">--OUTPUT</span> genomes/GCF_000011585.1_ASM1158v1_genomic.fna.dict</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">#dvu</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">gatk</span>  CreateSequenceDictionary <span class="at">--REFERENCE</span> genomes/GCF_000195755.1_ASM19575v1_genomic.fna <span class="at">--OUTPUT</span> genomes/GCF_000195755.1_ASM19575v1_genomic.fna.dict</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then, using GATK4 reads were converted to sam files, Illumina adapters were identified and new Fastq files mapped against the target genomes using bwa mem. Resultant files were sorted and converted to bam files</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="va">N_THREADS</span><span class="op">=</span>20</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> READ1 <span class="kw">in</span> rawdata/<span class="pp">*</span>1.fastq.gz <span class="kw">;</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a> <span class="cf">do</span>  </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">SAMPLE_ID</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$READ1</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $NF}&#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f2-4</span> <span class="at">-d</span> <span class="st">&quot;_&quot;</span> <span class="va">)</span><span class="kw">;</span> </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="va">READ2</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$READ1</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/1.fastq.gz/2.fastq.gz/&#39;</span><span class="va">)</span><span class="kw">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="va">OUT_FNAME</span><span class="op">=</span>out/<span class="va">${SAMPLE_ID}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="kw">[[</span> <span class="va">$SAMPLE_ID</span> <span class="ot">==</span> <span class="pp">*</span><span class="st">&#39;Dvu&#39;</span><span class="pp">*</span> <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">GENOME</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span>  <span class="st">&quot;genomes/GCF_000195755.1_ASM19575v1_genomic.fna&quot;</span><span class="va">)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="va">DIC</span><span class="op">=</span>=<span class="va">$(</span><span class="bu">echo</span>  <span class="st">&quot;genomes/GCF_000195755.1_ASM19575v1_genomic.fna.dic&quot;</span><span class="va">)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="va">GENOME</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span>  <span class="st">&quot;genomes/GCF_000011585.1_ASM1158v1_genomic.fna&quot;</span><span class="va">)</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="va">DIC</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span>  <span class="st">&quot;genomes/GCF_000011585.1_ASM1158v1_genomic.fna.dic&quot;</span><span class="va">)</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gatk</span> FastqToSam <span class="at">--FASTQ</span> <span class="va">${READ1}</span> <span class="at">--FASTQ2</span> <span class="va">${READ2}</span> <span class="at">--OUTPUT</span> <span class="va">${OUT_FNAME}</span>.unaligned.bam <span class="at">--SAMPLE_NAME</span> <span class="va">${SAMPLE_ID}</span> <span class="at">--LIBRARY_NAME</span> <span class="va">${SAMPLE_ID}</span>.lib  <span class="at">--SORT_ORDER</span> queryname </span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gatk</span> MarkIlluminaAdapters <span class="at">--INPUT</span> <span class="va">${OUT_FNAME}</span>.unaligned.bam <span class="at">--OUTPUT</span> <span class="va">${OUT_FNAME}</span>.adaptMarked.bam <span class="at">--METRICS</span> <span class="va">${OUT_FNAME}</span>.adaptMarked.metrics.txt </span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gatk</span> SamToFastq <span class="at">--INPUT</span> <span class="va">${OUT_FNAME}</span>.adaptMarked.bam <span class="at">--FASTQ</span> <span class="va">${OUT_FNAME}</span>.interleaved.fastq.gz <span class="at">--CLIPPING_ATTRIBUTE</span> XT <span class="at">--CLIPPING_ACTION</span> 2 <span class="at">--INTERLEAVE</span> true <span class="at">--INCLUDE_NON_PF_READS</span> true </span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="ex">bwa</span> mem <span class="at">-K</span> 100000000 <span class="at">-v</span> 3 <span class="at">-t</span> <span class="va">${N_THREADS}</span> <span class="at">-Y</span> <span class="at">-p</span> GENOME <span class="va">${OUT_FNAME}</span>.interleaved.fastq.gz <span class="op">&gt;</span>   {OUT_FNAME}.aligned.sam</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="ex">samtools</span> view <span class="at">-h</span> <span class="at">-b</span> {OUT_FNAME}.aligned.sam <span class="op">&gt;</span> <span class="va">${OUT_FNAME}</span>.aligned.bam</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gatk</span> MergeBamAlignment <span class="at">--REFERENCE_SEQUENCE</span> <span class="va">${GENOME}</span> <span class="at">--UNMAPPED_BAM</span> <span class="va">${OUT_FNAME}</span>.unaligned.bam <span class="at">--ALIGNED_BAM</span> <span class="va">${OUT_FNAME}</span>.aligned.bam <span class="at">--OUTPUT</span> <span class="va">${OUT_FNAME}</span>.alnMerged.bam <span class="at">--CREATE_INDEX</span> false <span class="at">--ADD_MATE_CIGAR</span> true <span class="at">--CLIP_ADAPTERS</span> true <span class="at">--CLIP_OVERLAPPING_READS</span> true <span class="at">--INCLUDE_SECONDARY_ALIGNMENTS</span> true <span class="at">--MAX_INSERTIONS_OR_DELETIONS</span> <span class="at">-1</span> <span class="at">--PRIMARY_ALIGNMENT_STRATEGY</span> BestMapq <span class="at">--ATTRIBUTES_TO_RETAIN</span> XS</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># or: samtools sort -n -m3G --threads ${N_THREADS} [input] &gt; [output]</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="ex">gatk</span> SortSamSpark <span class="at">--input</span> <span class="va">${OUT_FNAME}</span>.alnMerged.bam <span class="at">--output</span> <span class="va">${OUT_FNAME}</span>.bam <span class="at">--sort-order</span> queryname   <span class="at">--verbosity</span> WARNING</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
-<section id="rna-seq-mapping" class="level2">
-<h2 class="anchored" data-anchor-id="rna-seq-mapping">RNA Seq mapping</h2>
-<p>In this part of the analysis, trimmed sequencing reads are mapped against target genomes.</p>
-<section id="download-assemblies" class="level3">
-<h3 class="anchored" data-anchor-id="download-assemblies">Download assemblies</h3>
-<p>Prior read sequencing mapping, we need to download the target assemblies for the study.</p>
-<table class="table-striped table-hover table-light caption-top table">
-<thead>
-<tr class="header">
-<th>NCBI_RefSeq_assembly</th>
-<th>Taxon</th>
-<th>Strain</th>
-<th>Org code</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><a href="https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000011585.1/">GCF_000011585.1</a></td>
-<td>Methanococcus maripaludis S2</td>
-<td>S2</td>
-<td>mmp</td>
-</tr>
-<tr class="even">
-<td><a href="https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000195755.1/">GCF_000195755.1</a></td>
-<td>Nitratidesulfovibrio vulgaris str. Hildenborough</td>
-<td>Hildenborough</td>
-<td>dvu</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="index-genomes." class="level3">
-<h3 class="anchored" data-anchor-id="index-genomes.">Index genomes.</h3>
-<p>Trimmed reads were mapped using STAR, for this, first we indexed the genomes</p>
+<section id="quickvariant-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="quickvariant-analysis">QuickVariant analysis</h2>
+<p>With the resultant sam files, we were able to run the QuickVariant tool for variant identification:</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">#mmp</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">STAR</span> <span class="at">--runThreadN</span> 10 <span class="at">--runMode</span> genomeGenerate <span class="at">--genomeDir</span> Operational/STAR_index_MMP_CDS  <span class="at">--genomeFastaFiles</span> RawData/GCF_000011585.1_ASM1158v1_genomic.fna <span class="at">--sjdbGTFfile</span> RawData/GCF_000011585.1_ASM1158v1_genomic_NO_SPACE.gtf <span class="at">--sjdbGTFfeatureExon</span> CDS <span class="at">--genomeSAindexNbases</span> 9</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#dvu</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">STAR</span> <span class="at">--runThreadN</span> 10 <span class="at">--runMode</span> genomeGenerate <span class="at">--genomeDir</span> Operational/STAR_index_DVU_CDS/  <span class="at">--genomeFastaFiles</span> RawData/GCF_000195755.1_ASM19575v1_genomic.fna  <span class="at">--sjdbGTFfile</span> RawData/GCF_000195755.1_ASM19575v1_genomic_NO_SPACE.gtf <span class="at">--sjdbGTFfeatureExon</span> CDS <span class="at">--genomeSAindexNbases</span> 9</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file <span class="kw">in</span> out/<span class="pp">*</span>.sam<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">SAMPLE_ID</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $NF}&#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f1-3</span> <span class="at">-</span> <span class="st">&quot;_&quot;</span><span class="va">)</span><span class="kw">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">OUT_FNAME</span><span class="op">=</span>quick_variant/<span class="va">${SAMPLE_ID}</span><span class="kw">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="kw">[[</span> <span class="va">$SAMPLE_ID</span> <span class="ot">==</span> <span class="pp">*</span><span class="st">&#39;Dvu&#39;</span><span class="pp">*</span> <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>      <span class="va">GENOME</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span>  <span class="st">&quot;genomes/GCF_000195755.1_ASM19575v1_genomic.fna&quot;</span><span class="va">)</span><span class="kw">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>      <span class="va">GENOME</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span>  <span class="st">&quot;genomes/GCF_000011585.1_ASM1158v1_genomic.fna&quot;</span><span class="va">)</span><span class="kw">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span><span class="kw">;</span> </span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a> <span class="ex">java</span> <span class="at">-jar</span> ~/utils/quick-variants-1.1.0.jar  <span class="at">--reference</span> <span class="va">${GENOME}</span> <span class="at">--out-mutations</span> <span class="va">${OUT_FNAME}</span>_mut.out <span class="at">--out-vcf</span> <span class="va">${OUT_FNAME}</span>.vcf <span class="at">--vcf-exclude-non-mutations</span> <span class="at">--out-refs-map-count</span>  <span class="va">${OUT_FNAME}</span>_sum.txt  <span class="at">--out-sam</span> <span class="va">${OUT_FNAME}</span>.out.sam   <span class="at">--in-ordered-sam</span> <span class="va">$file</span> <span class="at">--num-threads</span> 30 <span class="kw">;</span> </span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p>For the co-cultures we need to create an indexed genome with both <em>mmp</em> and <em>dvu</em> assemblies.</p>
-<p>Concatenate gtf files:</p>
+<p>Output files were used to map the filtered variant coordinates to features on the corresponding GFF file for each target organism:</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>  RawData/GCF_000011585.1_ASM1158v1_genomic.gtf RawData/GCF_000195755.1_ASM19575v1_genomic.gtf <span class="op">&gt;</span> RawData/GCF_000195755.1_GCF_000011585.1_genomic.gtf</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Index concatenated assemblies:</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">STAR</span> <span class="at">--runThreadN</span> 10 <span class="at">--runMode</span> genomeGenerate <span class="at">--genomeDir</span> Operational/STAR_index_Mix_CDS <span class="at">--genomeFastaFiles</span> RawData/GCF_000195755.1_ASM19575v1_genomic.fna RawData/GCF_000011585.1_ASM1158v1_genomic.fna <span class="at">--sjdbGTFfile</span> RawData/GCF_000195755.1_GCF_000011585.1_genomic.gtf <span class="at">--sjdbGTFfeatureExon</span> CDS <span class="at">--genomeSAindexNbases</span> 9</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-</section>
-<section id="mapping-the-reads" class="level3">
-<h3 class="anchored" data-anchor-id="mapping-the-reads">Mapping the reads</h3>
-<p>Mapping the <em>mmp</em> trimmed reads vs the indexed genome:</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r1 <span class="kw">in</span> Trimmed_reads/Mmp/<span class="pp">*</span>_R1_paired<span class="pp">*</span><span class="kw">;</span>     </span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a> <span class="cf">do</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>     <span class="va">r2</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/R1_/R2_/&#39;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>     <span class="va">od</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $3}&#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f1</span> <span class="at">-d</span><span class="st">&quot;_&quot;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>     <span class="ex">STAR</span> <span class="at">--runThreadN</span> 25 <span class="at">--genomeDir</span> Operational/STAR_index_MMP_CDS/ <span class="dt">\</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">--readFilesIn</span> <span class="va">$r1</span> <span class="va">$r2</span> <span class="at">--readFilesCommand</span> zcat <span class="at">--outFileNamePrefix</span> Operational/mapping_STAR/<span class="va">${od}</span> <span class="dt">\</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">--quantMode</span> GeneCounts<span class="kw">;</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a> <span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Mapping the <em>dvu</em> trimmed reads vs the indexed genome:</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r1 <span class="kw">in</span> Trimmed_reads/Dvu/<span class="pp">*</span>_R1_paired<span class="pp">*</span><span class="kw">;</span>  </span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>     <span class="va">r2</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/R1_/R2_/&#39;</span><span class="va">)</span><span class="kw">;</span> </span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>     <span class="va">od</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $3}&#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f1</span> <span class="at">-d</span><span class="st">&quot;_&quot;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>      <span class="ex">STAR</span> <span class="at">--runThreadN</span> 25 <span class="at">--genomeDir</span> Operational/STAR_index_DVU_CDS/ </span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>          <span class="ex">--readFilesIn</span> <span class="va">$r1</span> <span class="va">$r2</span> <span class="at">--readFilesCommand</span> zcat <span class="at">--outFileNamePrefix</span> Operational/mapping_STAR/<span class="va">${od}</span>  </span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>          <span class="ex">--quantMode</span> GeneCounts<span class="kw">;</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a> <span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Map co-cultures:</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r1 <span class="kw">in</span> Trimmed_reads/<span class="pp">*</span>g/<span class="pp">*</span>_R1_paired<span class="pp">*</span><span class="kw">;</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a> <span class="va">r2</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/R1_/R2_/&#39;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">od</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $3}&#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f1</span> <span class="at">-d</span><span class="st">&quot;_&quot;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">STAR</span> <span class="at">--runThreadN</span> 25 <span class="at">--genomeDir</span> Operational/STAR_index_Mix_CDS/ <span class="at">--readFilesIn</span> <span class="va">$r1</span> <span class="va">$r2</span> <span class="at">--readFilesCommand</span> zcat <span class="at">--outFileNamePrefix</span> Operational/mapping_STAR_Meta/ <span class="va">${od}</span>_vs_dvu_  <span class="at">--quantMode</span> GeneCounts<span class="kw">;</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#mmp</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file <span class="kw">in</span> Mmp<span class="pp">*</span>mut.out <span class="kw">;</span> </span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a> <span class="va">sample</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/_mut.out//&#39;</span><span class="va">)</span><span class="kw">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a> <span class="fu">cat</span> <span class="va">$file</span> <span class="kw">|</span><span class="dt">\</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>   <span class="fu">awk</span> <span class="st">&#39;BEGIN{OFS=&quot;\t&quot;; print &quot;CHR\tPOS\tREF\tALT\tDEPTH\tTOTAL_DEPTH\tGFF_start\tGFF_end\tGFF_Desc&quot;}</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="st">     NR==FNR{if(NR&gt;2){h[$2]=$0};next} </span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="st">     $3 ~ &quot;gene&quot;{for(ref in h){</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="st">                    split(h[ref],b,&quot;\t&quot;);</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="st">                    if($1==b[1] &amp;&amp; ref+0&gt;=$4+0 &amp;&amp; ref+0&lt;=$5+0){</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="st">                       print h[ref],$4,$5,$9; </span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="st">                       delete h[ref];</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="st">                     }</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="st">                   }</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="st">                 }</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="st">    END{for(ref in h){</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="st">         print h[ref],&quot;-&quot;,&quot;-&quot;,&quot;NO Feature&quot;;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="st">        }</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="st">       }&#39;</span> <span class="at">-</span> ../GCF_000011585.1_ASM1158v1_genomic.no_header.gff <span class="op">&gt;</span> mapped_mut/<span class="va">${sample}</span>.out<span class="kw">;</span> </span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co">#dvu</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file <span class="kw">in</span> Dvu<span class="pp">*</span>mut.out <span class="kw">;</span> </span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a> <span class="va">sample</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/_mut.out//&#39;</span><span class="va">)</span><span class="kw">;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a> <span class="fu">cat</span> <span class="va">$file</span> <span class="kw">|</span><span class="dt">\</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>   <span class="fu">awk</span> <span class="st">&#39;BEGIN{OFS=&quot;\t&quot;; print &quot;CHR\tPOS\tREF\tALT\tDEPTH\tTOTAL_DEPTH\tGFF_start\tGFF_end\tGFF_Desc&quot;}</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="st">     NR==FNR{if(NR&gt;2){h[$2]=$0};next} </span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="st">     $3 ~ &quot;gene&quot;{for(ref in h){</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="st">                    split(h[ref],b,&quot;\t&quot;);</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="st">                    if($1==b[1] &amp;&amp; ref+0&gt;=$4+0 &amp;&amp; ref+0&lt;=$5+0){</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="st">                       print h[ref],$4,$5,$9; </span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="st">                       delete h[ref];</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="st">                     }</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="st">                   }</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="st">                 }</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="st">    END{for(ref in h){</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="st">         print h[ref],&quot;-&quot;,&quot;-&quot;,&quot;NO Feature&quot;;</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="st">        }</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a><span class="st">       }&#39;</span> </span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>      <span class="ex">-</span> ../GCF_000195755.1_ASM19575v1_genomic.no_header.gff <span class="op">&gt;</span> mapped_mut/<span class="va">${sample}</span>.out<span class="kw">;</span> <span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
-<section id="data-normalization" class="level3">
-<h3 class="anchored" data-anchor-id="data-normalization">Data Normalization</h3>
-<p>First we need to compute the number of reads mapping to intergenic regions, to do this, a gff file will be created using the coordinates to the intergenic regions rather than to the genes. Only intergenic regions longer than 100bp are taken into account.</p>
-<p><em>mmp gff</em></p>
+<section id="variant-annotation" class="level2">
+<h2 class="anchored" data-anchor-id="variant-annotation">Variant annotation</h2>
+<p>To commplement the results with the effect of the mutations, the effect of the resultant variants was annotated using SnpEff:</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> data/transcriptomics/mmp_NC_005791.gff3 <span class="kw">|</span><span class="dt">\</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">grep</span> <span class="at">-v</span> <span class="st">&quot;^#&quot;</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;\t&quot;</span> <span class="st">&#39;BEGIN{start=0;end=0;OFS=&quot;\t&quot;;inter=0}; </span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="st">                   $3 !~ &quot;region&quot;{if($4&gt;end){ #start should be greater than previous end</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="st">                                     if(($4-1)-(end+1)&gt;99){#length filter</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="st">                                        print $1,$2,&quot;intergenic&quot;,end+1,$4-1,&quot;.\t+\t.&quot;,&quot;gene_id \&quot;inter_&quot;inter&quot;\&quot;\n&quot;$0;</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="st">                                        inter++;</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="st">                                      }else{</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="st">                                         print $0</span></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="st">                                      };start=$4;end=$5</span></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="st">                                  }else if($5&gt;end){ #current feature could start before the previous end but finish after.</span></span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="st">                                        end=$5; </span></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="st">                                        print $0;</span></span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="st">                                   }else{print $0}</span></span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="st">                                } $3 ~ &quot;region&quot;{print $0}&#39;</span> <span class="op">&gt;</span> data/transcriptomics/mmp_intergenic_min100.gff</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">#mmp</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a> <span class="cf">for</span> file <span class="kw">in</span> quick_variant/Mmp<span class="pp">*</span>_mut.out<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">sample</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $NF}&#39;</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/_mut.out//&#39;</span><span class="va">)</span><span class="kw">;</span> </span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a> <span class="bu">echo</span> <span class="va">$sample</span><span class="kw">;</span>  <span class="fu">cat</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/^CHR/#CHR/ ; s/NC_005791.1/Chromosome/&#39;</span> <span class="op">&gt;</span> vcf_snpeff/<span class="va">${sample}</span>.bed<span class="kw">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a> <span class="ex">snpeff</span> <span class="at">-v</span>  Methanococcus_maripaludis_s2_gca_000011585 vcf_snpeff/<span class="va">${sample}</span>.bed <span class="at">-s</span> out_snpeff/<span class="va">${sample}</span>.html <span class="op">&gt;</span> out_snpeff/<span class="va">${sample}</span>.log</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a> <span class="cf">done</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">#dvu</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file <span class="kw">in</span> quick_variant/Dvu<span class="pp">*</span>_mut.out<span class="kw">;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a> <span class="cf">do</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="va">sample</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $NF}&#39;</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/_mut.out//&#39;</span><span class="va">)</span><span class="kw">;</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>   <span class="bu">echo</span> <span class="va">$sample</span><span class="kw">;</span>  <span class="fu">cat</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/^CHR/#CHR/ ; s/NC_002937.3/Chromosome/ ; s/NC_005863.1/pDV/&#39;</span> <span class="op">&gt;</span> vcf_snpeff/<span class="va">${sample}</span>.bed<span class="kw">;</span> </span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  <span class="ex">snpeff</span> <span class="at">-v</span>  Desulfovibrio_vulgaris_str_hildenborough vcf_snpeff/<span class="va">${sample}</span>.bed <span class="at">-s</span> out_snpeff/<span class="va">${sample}</span>.html <span class="op">&gt;</span> out_snpeff/<span class="va">${sample}</span>.log<span class="kw">;</span> </span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p><em>dvu gff</em></p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> data/transcriptomics/dvu.gff <span class="kw">|</span><span class="dt">\</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">grep</span> <span class="at">-v</span> <span class="st">&quot;^#&quot;</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;\t&quot;</span> <span class="st">&#39;BEGIN{start=0;end=0;OFS=&quot;\t&quot;;inter=0}; </span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="st">                   $3 !~ &quot;region&quot;{if($4&gt;end){ #start should be greater than previous end</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="st">                                     if(($4-1)-(end+1)&gt;99){#length filter</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="st">                                        print $1,$2,&quot;intergenic&quot;,end+1,$4-1,&quot;.\t+\t.&quot;,&quot;gene_id \&quot;inter_&quot;inter&quot;\&quot;\n&quot;$0;</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="st">                                        inter++;</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="st">                                      }else{</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="st">                                         print $0</span></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="st">                                      };start=$4;end=$5</span></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="st">                                  }else if($5&gt;end){ #current feature could start before the previous end but finish after.</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="st">                                        end=$5; </span></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="st">                                        print $0;</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="st">                                   }else{print $0}</span></span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="st">                                } $3 ~ &quot;region&quot;{print $0}&#39;</span> <span class="op">&gt;</span> data/transcriptomics/dvu_intergenic_min100.gff</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p><em>co-cultures</em></p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> data/transcriptomics/mmp_intergenic_min100.gff <span class="kw">|</span><span class="dt">\</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sed</span> <span class="st">&#39;s/inter_/inter_mmp_/&#39;</span> <span class="kw">|</span><span class="dt">\</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span> <span class="at">-</span> <span class="op">&lt;(</span><span class="fu">cat</span> data/transcriptomics/dvu_intergenic_min100.gff <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/inter_/inter_dvu_/&#39;</span> <span class="op">)</span> <span class="op">&gt;</span><span class="dt">\</span></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    data/transcriptomics/mmp_dvu_concat_intergenic.gff</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-</section>
-<section id="create-new-index-for-the-intergenic-regions" class="level3">
-<h3 class="anchored" data-anchor-id="create-new-index-for-the-intergenic-regions">Create new index for the intergenic regions:</h3>
-<p><em>mmp</em></p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">STAR</span> <span class="at">--runThreadN</span> 10 <span class="at">--runMode</span> genomeGenerate <span class="at">--genomeDir</span> Operational/STAR_index_MMP_intergenic_100 <span class="at">--genomeFastaFiles</span>  RawData/GCF_000011585.1_ASM1158v1_genomic.fna <span class="at">--sjdbGTFfile</span> data/transcriptomics/mmp_intergenic_min100.gff <span class="at">--sjdbGTFfeatureExon</span> intergenic <span class="at">--genomeSAindexNbases</span> 9</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p><em>dvu</em></p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">STAR</span> <span class="at">--runThreadN</span> 10 <span class="at">--runMode</span> genomeGenerate <span class="at">--genomeDir</span> Operational/STAR_index_DVU_intergenic_100_gene_id/ <span class="at">--genomeFastaFiles</span>  RawData/GCF_000195755.1_ASM19575v1_genomic.fna <span class="at">--sjdbGTFfile</span> data/transcriptomics/dvu_intergenic_min100.gff <span class="at">--sjdbGTFfeatureExon</span> intergenic</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p><em>co-cultures</em></p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">STAR</span> <span class="at">--runThreadN</span> 10 <span class="at">--runMode</span> genomeGenerate <span class="at">--genomeDir</span> Operational/STAR_index_MMP_DVU_Intergenic  <span class="at">--genomeFastaFiles</span> RawData/GCF_000011585.1_ASM1158v1_genomic.fna RawData/GCF_000195755.1_ASM19575v1_genomic.fna <span class="at">--sjdbGTFfile</span>  mmp_dvu_concat_intergenic.gff <span class="at">--sjdbGTFfeatureExon</span> intergenic <span class="at">--genomeSAindexNbases</span> 9</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-</section>
-<section id="map-intergenic-regions-with-star" class="level3">
-<h3 class="anchored" data-anchor-id="map-intergenic-regions-with-star">Map intergenic regions with STAR</h3>
-<p><em>mmp</em></p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r1 <span class="kw">in</span> Trimmed_reads/Mmp/<span class="pp">*</span>_R1_paired<span class="pp">*</span><span class="kw">;</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">do</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">r2</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/R1_/R2_/&#39;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">od</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $3}&#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f1</span> <span class="at">-d</span><span class="st">&quot;_&quot;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">STAR</span> <span class="at">--runThreadN</span> 25 <span class="at">--genomeDir</span> Operational/STAR_index_MMP_intergenic_100_gene_id  <span class="at">--readFilesIn</span> <span class="va">$r1</span> <span class="va">$r2</span> <span class="at">--readFilesCommand</span> zcat <span class="at">--outFileNamePrefix</span> Operational/mapping_STAR_Intergenic_100_gene_id/<span class="va">${od}</span> <span class="at">--quantMode</span> GeneCounts<span class="kw">;</span> </span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p><em>dvu</em></p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r1 <span class="kw">in</span> Trimmed_reads/Dvu/<span class="pp">*</span>_R1_paired<span class="pp">*</span><span class="kw">;</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">do</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">r2</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/R1_/R2_/&#39;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">od</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $3}&#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f1</span> <span class="at">-d</span><span class="st">&quot;_&quot;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">STAR</span> <span class="at">--runThreadN</span> 25 <span class="at">--genomeDir</span> Operational/STAR_index_DVU_intergenic_100_gene_id/  <span class="at">--readFilesIn</span> <span class="va">$r1</span> <span class="va">$r2</span> <span class="at">--readFilesCommand</span> zcat <span class="at">--outFileNamePrefix</span> Operational/mapping_STAR_Intergenic_100_gene_id_dvu/<span class="va">${od}</span> <span class="at">--quantMode</span> GeneCounts<span class="kw">;</span> </span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p><em>co-cultures</em></p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r1 <span class="kw">in</span> Trimmed_reads/coculture/<span class="pp">*</span>_R1_paired<span class="pp">*</span><span class="kw">;</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>   <span class="cf">do</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">r2</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/R1_/R2_/&#39;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">od</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$r1</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&quot;/&quot;</span> <span class="st">&#39;{print $3}&#39;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f1</span> <span class="at">-d</span><span class="st">&quot;_&quot;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">STAR</span> <span class="at">--runThreadN</span> 25 <span class="at">--genomeDir</span> Operational/STAR_index_MMP_DVU_Intergenic  <span class="at">--readFilesIn</span> <span class="va">$r1</span> <span class="va">$r2</span> <span class="at">--readFilesCommand</span> zcat <span class="at">--outFileNamePrefix</span> Operational/mapping_STAR_Intergenic_100_gene_id_cocultures_new/<span class="va">${od}</span>  <span class="at">--quantMode</span> GeneCounts<span class="kw">;</span></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>   <span class="cf">done</span></span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>   </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Now compute the mean of the media for all the samples and substract that value per sample:</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file <span class="kw">in</span> Operational/mapping_STAR/<span class="pp">*</span>ReadsPerGene.out.tab<span class="kw">;</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">do</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>   <span class="va">samp</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$file</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="at">-F</span><span class="st">&#39;/&#39;</span> <span class="st">&#39;{gsub(&quot;ReadsPerGene.out.tab&quot;,&quot;&quot;,$3); print $3}&#39;</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>   <span class="va">median</span><span class="op">=</span><span class="va">$(</span><span class="fu">grep</span> <span class="va">$samp</span> data/transcriptomics/intergenic_medians.txt <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-f2</span><span class="va">)</span><span class="kw">;</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>   <span class="fu">awk</span> <span class="at">-v</span> m=<span class="va">${median}</span> <span class="st">&#39;NR&gt;4{if($3 &gt;= m){value=$3-m}else{value=0}; print $1&quot;\t&quot;$3&quot;\t&quot;value;}&#39;</span> <span class="va">$file</span> <span class="op">&gt;</span> data/transcriptomics/counts/<span class="va">${samp}</span>CDS_counts.txt<span class="kw">;</span></span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a> <span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-</section>
-</section>
-<section id="diferential-expression-analysis" class="level2">
-<h2 class="anchored" data-anchor-id="diferential-expression-analysis">Diferential expression analysis</h2>
-<p>Create metadata files with sample information. Each file contains the sample, replicate number and “condition”: Single culture, Ancestor, 300 generation and 1000 generation:</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(<span class="st">&quot;Data/&quot;</span>)</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>samples_dvu_all <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&quot;sample_map_all_dvu_final.txt&quot;</span>, <span class="at">header=</span><span class="cn">TRUE</span>)</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>samples_mmp_all <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&quot;sample_map_all_mmp_final.txt&quot;</span>, <span class="at">header=</span><span class="cn">TRUE</span>)</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="co">#add rownames:</span></span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(samples_dvu_all) <span class="ot">&lt;-</span> samples_dvu_all<span class="sc">$</span>sample</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(samples_mmp_all) <span class="ot">&lt;-</span> samples_mmp_all<span class="sc">$</span>sample</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Load count matrices and then re-order the factors in such a way that we can compare the single culture vs the cocultures</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>count_matrix_dvu <span class="ot">&lt;-</span> <span class="fu">read.delim</span>(<span class="st">&quot;dvu_norm_counts_all_final.txt&quot;</span>, <span class="at">header=</span>T, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>, <span class="at">row.names=</span><span class="dv">1</span>)</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>count_matrix_mmp <span class="ot">&lt;-</span> <span class="fu">read.delim</span>(<span class="st">&quot;mmp_norm_counts_all_final.txt&quot;</span>, <span class="at">header=</span>T, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>, <span class="at">row.names=</span><span class="dv">1</span>)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co">#first convert column to factor</span></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>samples_dvu_all<span class="sc">$</span>condition <span class="ot">&lt;-</span> <span class="fu">as.factor</span>(samples_dvu_all<span class="sc">$</span>condition)</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>samples_mmp_all<span class="sc">$</span>condition <span class="ot">&lt;-</span> <span class="fu">as.factor</span>(samples_mmp_all<span class="sc">$</span>condition)</span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co">#sort:</span></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>samples_dvu_all<span class="sc">$</span>condition <span class="ot">&lt;-</span> <span class="fu">relevel</span>(samples_dvu_all<span class="sc">$</span>condition, <span class="at">ref =</span> <span class="st">&quot;Dvu&quot;</span>)</span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>samples_mmp_all<span class="sc">$</span>condition <span class="ot">&lt;-</span> <span class="fu">relevel</span>(samples_mmp_all<span class="sc">$</span>condition, <span class="at">ref =</span> <span class="st">&quot;Mmp&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Another requirement was to do the comparition between the Ancestor and the future generations:</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">#fDo the same as above but for &quot;Anc&quot;</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>samples_dvu_all_Anc <span class="ot">&lt;-</span> samples_dvu_all</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>samples_mmp_all_Anc <span class="ot">&lt;-</span> samples_mmp_all</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co">#sort:</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>samples_dvu_all<span class="sc">$</span>condition <span class="ot">&lt;-</span> <span class="fu">relevel</span>(samples_dvu_all<span class="sc">$</span>condition, <span class="at">ref =</span> <span class="st">&quot;Dvu&quot;</span>)</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>samples_mmp_all<span class="sc">$</span>condition <span class="ot">&lt;-</span> <span class="fu">relevel</span>(samples_mmp_all<span class="sc">$</span>condition, <span class="at">ref =</span> <span class="st">&quot;Mmp&quot;</span>)</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>samples_dvu_all_Anc<span class="sc">$</span>condition <span class="ot">&lt;-</span> <span class="fu">relevel</span>(samples_dvu_all_Anc<span class="sc">$</span>condition, <span class="at">ref =</span> <span class="st">&quot;Anc&quot;</span>)</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>samples_mmp_all_Anc<span class="sc">$</span>condition <span class="ot">&lt;-</span> <span class="fu">relevel</span>(samples_mmp_all_Anc<span class="sc">$</span>condition, <span class="at">ref =</span> <span class="st">&quot;Anc&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Now create and filter the DeSeq objects</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># then create the DESeq object</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co"># countData is the matrix containing the counts</span></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="co"># sampletable is the sample sheet / metadata we created</span></span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="co"># design is how we wish to model the data</span></span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>se_star_matrix_dvu <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> count_matrix_dvu,</span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">colData =</span> samples_dvu_all,</span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">design =</span> <span class="sc">~</span> condition)</span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>se_star_matrix_mmp <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> count_matrix_mmp,</span>
-<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>                                             <span class="at">colData =</span> samples_mmp_all,</span>
-<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>                                             <span class="at">design =</span> <span class="sc">~</span> condition)</span>
-<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>se_star_matrix_dvu_anc <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> count_matrix_dvu,</span>
-<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">colData =</span> samples_dvu_all_Anc,</span>
-<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">design =</span> <span class="sc">~</span> condition)</span>
-<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>se_star_matrix_mmp_anc <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> count_matrix_mmp,</span>
-<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>                                             <span class="at">colData =</span> samples_mmp_all_Anc,</span>
-<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>                                             <span class="at">design =</span> <span class="sc">~</span> condition)</span>
-<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a><span class="co">#Filtering genes which expresion across all the samples is less than 10</span></span>
-<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>se_star_matrix_dvu <span class="ot">&lt;-</span> se_star_matrix_dvu[<span class="fu">rowSums</span>(<span class="fu">counts</span>(se_star_matrix_dvu)) <span class="sc">&gt;</span> <span class="dv">10</span>, ]</span>
-<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>se_star_matrix_mmp <span class="ot">&lt;-</span> se_star_matrix_mmp[<span class="fu">rowSums</span>(<span class="fu">counts</span>(se_star_matrix_mmp)) <span class="sc">&gt;</span> <span class="dv">10</span>, ]</span>
-<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>se_star_matrix_dvu_anc <span class="ot">&lt;-</span> se_star_matrix_dvu_anc[<span class="fu">rowSums</span>(<span class="fu">counts</span>(se_star_matrix_dvu_anc)) <span class="sc">&gt;</span> <span class="dv">10</span>, ]</span>
-<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>se_star_matrix_mmp_anc <span class="ot">&lt;-</span> se_star_matrix_mmp_anc[<span class="fu">rowSums</span>(<span class="fu">counts</span>(se_star_matrix_mmp_anc)) <span class="sc">&gt;</span> <span class="dv">10</span>, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Fit statistical model and test result names:</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Fit statistical model</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>dseq_mmp <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(se_star_matrix_mmp)</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>dseq_dvu <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(se_star_matrix_dvu)</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>dseq_mmp_anc <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(se_star_matrix_mmp_anc)</span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>dseq_dvu_anc <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(se_star_matrix_dvu_anc)</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dseq_mmp)</span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dseq_dvu)</span>
-<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dseq_mmp_anc)</span>
-<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dseq_dvu_anc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Try to do a PCA:</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>rld_mmp <span class="ot">&lt;-</span> <span class="fu">rlog</span>(dseq_mmp)</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>rld_dvu <span class="ot">&lt;-</span> <span class="fu">rlog</span>(dseq_dvu)</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>rld_mmp_anc <span class="ot">&lt;-</span> <span class="fu">rlog</span>(dseq_mmp_anc)</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>rld_dvu_anc <span class="ot">&lt;-</span> <span class="fu">rlog</span>(dseq_dvu_anc)</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pheatmap)</span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>sampleDistMatrix_mmp <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">dist</span>(<span class="fu">t</span>(<span class="fu">assay</span>(rld_mmp))))</span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>sampleDistMatrix_dvu <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">dist</span>(<span class="fu">t</span>(<span class="fu">assay</span>(rld_dvu))))</span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a><span class="fu">pheatmap</span>(sampleDistMatrix_mmp, <span class="at">main=</span><span class="st">&quot;between-sample distance matrix MMP&quot;</span>)</span>
-<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a><span class="fu">pheatmap</span>(sampleDistMatrix_dvu, <span class="at">main=</span><span class="st">&quot;between-sample distance matrix DVU&quot;</span>)</span>
-<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a><span class="fu">plotPCA</span>(<span class="at">object =</span> rld_mmp,</span>
-<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">intgroup =</span> <span class="st">&quot;condition&quot;</span>)</span>
-<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a><span class="fu">plotPCA</span>(<span class="at">object =</span> rld_dvu,</span>
-<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>        <span class="at">intgroup =</span> <span class="st">&quot;condition&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Results without LFC Shrink</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>de_1000g_vs_Mmp <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_mmp, </span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_1000g_vs_Mmp&quot;</span>)</span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>de_300g_vs_Mmp <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_mmp, </span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_300g_vs_Mmp&quot;</span>)</span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>de_Anc_vs_Mmp <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_mmp, </span>
-<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_Anc_vs_Mmp&quot;</span>)</span>
-<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>de_1000g_vs_Dvu <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_dvu, </span>
-<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_1000g_vs_Dvu&quot;</span>)</span>
-<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>de_300g_vs_Dvu <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_dvu, </span>
-<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_300g_vs_Dvu&quot;</span>)</span>
-<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>de_Anc_vs_Dvu <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_dvu, </span>
-<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_Anc_vs_Dvu&quot;</span>)                         </span>
-<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>de_1000g_vs_Anc_Mmp <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_mmp_anc, </span>
-<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_1000g_vs_Anc&quot;</span>)</span>
-<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a>de_300g_vs_Anc_Mmp <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_mmp_anc, </span>
-<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_300g_vs_Anc&quot;</span>)</span>
-<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>de_1000g_vs_Anc_Dvu <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_dvu_anc, </span>
-<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_1000g_vs_Anc&quot;</span>)</span>
-<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>de_300g_vs_Anc_Dvu <span class="ot">&lt;-</span> <span class="fu">results</span>(<span class="at">object =</span> dseq_dvu_anc, </span>
-<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a>                         <span class="at">name=</span><span class="st">&quot;condition_300g_vs_Anc&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Write the tables</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_1000g_vs_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/de_1000g_vs_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>)</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_300g_vs_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/de_300g_vs_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>)                         </span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_Anc_vs_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/de_Anc_vs_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_1000g_vs_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/de_1000g_vs_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_300g_vs_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/de_300g_vs_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>)                      </span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_Anc_vs_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/de_Anc_vs_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_1000g_vs_Anc_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/de_1000g_vs_Anc_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_300g_vs_Anc_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/de_300g_vs_Anc_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_1000g_vs_Anc_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/de_1000g_vs_Anc_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(de_300g_vs_Anc_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/de_300g_vs_Anc_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>Finally shrink values and wrote tables</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>shrink_de_1000g_vs_Mmp <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_mmp, </span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_1000g_vs_Mmp&quot;</span>, <span class="at">type=</span><span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>shrink_de_300g_vs_Mmp <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_mmp, </span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_300g_vs_Mmp&quot;</span>, <span class="at">type=</span><span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>shrink_de_Anc_vs_Mmp <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_mmp, </span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_Anc_vs_Mmp&quot;</span>, <span class="at">type=</span><span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>shrink_de_1000g_vs_Dvu <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_dvu, </span>
-<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_1000g_vs_Dvu&quot;</span>, <span class="at">type=</span><span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>shrink_de_300g_vs_Dvu <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_dvu, </span>
-<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_300g_vs_Dvu&quot;</span>, <span class="at">type=</span><span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>shrink_de_Anc_vs_Dvu <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_dvu, </span>
-<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_Anc_vs_Dvu&quot;</span>)                         </span>
-<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>shrink_de_1000g_vs_Anc_Mmp <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_mmp_anc, </span>
-<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_1000g_vs_Anc&quot;</span>, <span class="at">type=</span><span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a>shrink_de_300g_vs_Anc_Mmp <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_mmp_anc, </span>
-<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_300g_vs_Anc&quot;</span>, <span class="at">type=</span><span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb27-25"><a href="#cb27-25" aria-hidden="true" tabindex="-1"></a>                         </span>
-<span id="cb27-26"><a href="#cb27-26" aria-hidden="true" tabindex="-1"></a>shrink_de_1000g_vs_Anc_Dvu <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_dvu_anc, </span>
-<span id="cb27-27"><a href="#cb27-27" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_1000g_vs_Anc&quot;</span>, <span class="at">type=</span><span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb27-28"><a href="#cb27-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-29"><a href="#cb27-29" aria-hidden="true" tabindex="-1"></a>shrink_de_300g_vs_Anc_Dvu <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(<span class="at">dds =</span> dseq_dvu_anc, </span>
-<span id="cb27-30"><a href="#cb27-30" aria-hidden="true" tabindex="-1"></a>                         <span class="at">coef=</span><span class="st">&quot;condition_300g_vs_Anc&quot;</span>, <span class="at">type=</span><span class="st">&quot;apeglm&quot;</span>)</span>
-<span id="cb27-31"><a href="#cb27-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-32"><a href="#cb27-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-33"><a href="#cb27-33" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_1000g_vs_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_1000g_vs_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>)</span>
-<span id="cb27-34"><a href="#cb27-34" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_300g_vs_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_300g_vs_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>)                         </span>
-<span id="cb27-35"><a href="#cb27-35" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_Anc_vs_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_Anc_vs_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb27-36"><a href="#cb27-36" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_1000g_vs_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_1000g_vs_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb27-37"><a href="#cb27-37" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_300g_vs_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_300g_vs_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>)                      </span>
-<span id="cb27-38"><a href="#cb27-38" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_Anc_vs_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_Anc_vs_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb27-39"><a href="#cb27-39" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_1000g_vs_Anc_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_1000g_vs_Anc_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb27-40"><a href="#cb27-40" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_300g_vs_Anc_Mmp), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_300g_vs_Anc_Mmp.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb27-41"><a href="#cb27-41" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_1000g_vs_Anc_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_1000g_vs_Anc_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span>
-<span id="cb27-42"><a href="#cb27-42" aria-hidden="true" tabindex="-1"></a><span class="fu">write.table</span>(<span class="fu">as.data.frame</span>(shrink_de_300g_vs_Anc_Dvu), <span class="at">file=</span><span class="st">&quot;FinalResults/shrink_de_300g_vs_Anc_Dvu.tsv&quot;</span>, <span class="at">sep=</span><span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-</section>
-<section id="session-info-and-details." class="level2">
-<h2 class="anchored" data-anchor-id="session-info-and-details.">Session info and details.</h2>
-<p>Due to some issues with apeglm library we stop working at ada’s RStudio and moved to the console.</p>
-<pre><code>module load R/4.2.2
-R
-#R version 4.2.2 (2022-10-31) -- &quot;Innocent and Trusting&quot;</code></pre>
-<p>Loaded libraries</p>
-<pre><code>library(DESeq2)
-library(apeglm)</code></pre>
-<p>And session info</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<div class="classname">
-<p>R version 4.2.2 (2022-10-31) Platform: x86_64-pc-linux-gnu (64-bit) Running under: Red Hat Enterprise Linux</p>
-<p>Matrix products: default BLAS: /opt/biolinux/R/4.2.2/lib64/R/lib/libRblas.so LAPACK: /opt/biolinux/R/4.2.2/lib64/R/lib/libRlapack.so</p>
-<p>locale: [1] LC_CTYPE=en_US.UTF-8 LC_NUMERIC=C [3] LC_TIME=en_US.UTF-8 LC_COLLATE=en_US.UTF-8 [5] LC_MONETARY=en_US.UTF-8 LC_MESSAGES=en_US.UTF-8 [7] LC_PAPER=en_US.UTF-8 LC_NAME=C [9] LC_ADDRESS=C LC_TELEPHONE=C [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C</p>
-<p>attached base packages: [1] stats4 stats graphics grDevices utils datasets methods [8] base</p>
-<p>other attached packages: [1] apeglm_1.20.0 DESeq2_1.38.3 [3] SummarizedExperiment_1.28.0 Biobase_2.58.0 [5] MatrixGenerics_1.10.0 matrixStats_0.63.0 [7] GenomicRanges_1.50.2 GenomeInfoDb_1.34.9 [9] IRanges_2.32.0 S4Vectors_0.36.2 [11] BiocGenerics_0.44.0</p>
-<p>loaded via a namespace (and not attached): [1] bdsmatrix_1.3-6 Rcpp_1.0.10 locfit_1.5-9.7 [4] mvtnorm_1.1-3 lattice_0.21-8 png_0.1-8 [7] Biostrings_2.66.0 utf8_1.2.3 plyr_1.8.8 [10] R6_2.5.1 emdbook_1.3.13 RSQLite_2.3.1 [13] coda_0.19-4 httr_1.4.5 ggplot2_3.4.2 [16] pillar_1.9.0 zlibbioc_1.44.0 rlang_1.1.0 [19] annotate_1.76.0 blob_1.2.4 Matrix_1.5-4 [22] bbmle_1.0.25 BiocParallel_1.32.6 geneplotter_1.76.0 [25] RCurl_1.98-1.12 bit_4.0.5 munsell_0.5.0 [28] DelayedArray_0.24.0 numDeriv_2016.8-1.1 compiler_4.2.2 [31] pkgconfig_2.0.3 tidyselect_1.2.0 KEGGREST_1.38.0 [34] tibble_3.2.1 GenomeInfoDbData_1.2.9 codetools_0.2-19 [37] XML_3.99-0.14 fansi_1.0.4 crayon_1.5.2 [40] dplyr_1.1.2 MASS_7.3-59 bitops_1.0-7 [43] grid_4.2.2 xtable_1.8-4 gtable_0.3.3 [46] lifecycle_1.0.3 DBI_1.1.3 magrittr_2.0.3 [49] scales_1.2.1 cli_3.6.1 cachem_1.0.7 [52] XVector_0.38.0 vctrs_0.6.2 generics_0.1.3 [55] RColorBrewer_1.1-3 tools_4.2.2 bit64_4.0.5 [58] glue_1.6.2 parallel_4.2.2 fastmap_1.1.1 [61] AnnotationDbi_1.60.2 colorspace_2.1-0 memoise_2.0.1</p>
-</div>
+<p>Notice that chromosome names on the QuickVariant output, need to be renamed to match chromosome names on SnpEff database.</p>
 </section>
 
 </main>
