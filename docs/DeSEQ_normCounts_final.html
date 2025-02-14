@@ -3172,13 +3172,13 @@ color: rgb(100, 99, 255);
 <tbody>
 <tr class="odd">
 <td><a href="https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000011585.1/">GCF_000011585.1</a></td>
-<td>Methanococcus maripaludis S2</td>
+<td><em>Methanococcus maripaludis S2</em></td>
 <td>S2</td>
 <td>mmp</td>
 </tr>
 <tr class="even">
 <td><a href="https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000195755.1/">GCF_000195755.1</a></td>
-<td>Nitratidesulfovibrio vulgaris str. Hildenborough</td>
+<td><em>Desulfovibrio vulgaris Hildenborough</em></td>
 <td>Hildenborough</td>
 <td>dvu</td>
 </tr>
@@ -3198,7 +3198,7 @@ color: rgb(100, 99, 255);
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">STAR</span> <span class="at">--runThreadN</span> 10 <span class="at">--runMode</span> genomeGenerate <span class="at">--genomeDir</span> Operational/STAR_index_DVU_CDS/  <span class="at">--genomeFastaFiles</span> RawData/GCF_000195755.1_ASM19575v1_genomic.fna  <span class="at">--sjdbGTFfile</span> RawData/GCF_000195755.1_ASM19575v1_genomic_NO_SPACE.gtf <span class="at">--sjdbGTFfeatureExon</span> CDS <span class="at">--genomeSAindexNbases</span> 9</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p>For the co-cultures we need to create an indexed genome with both <em>mmp</em> and <em>dvu</em> assemblies.</p>
+<p>For the cocultures we need to create an indexed genome with both <em>mmp</em> and <em>dvu</em> assemblies.</p>
 <p>Concatenate gtf files:</p>
 <div class="cell">
 <details class="code-fold">
@@ -3244,7 +3244,7 @@ color: rgb(100, 99, 255);
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a> <span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p>Map co-cultures:</p>
+<p>Map cocultures:</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -3300,7 +3300,7 @@ color: rgb(100, 99, 255);
 <span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="st">                                } $3 ~ &quot;region&quot;{print $0}&#39;</span> <span class="op">&gt;</span> data/transcriptomics/dvu_intergenic_min100.gff</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p><em>co-cultures</em></p>
+<p><em>cocultures</em></p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -3327,7 +3327,7 @@ color: rgb(100, 99, 255);
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">STAR</span> <span class="at">--runThreadN</span> 10 <span class="at">--runMode</span> genomeGenerate <span class="at">--genomeDir</span> Operational/STAR_index_DVU_intergenic_100_gene_id/ <span class="at">--genomeFastaFiles</span>  RawData/GCF_000195755.1_ASM19575v1_genomic.fna <span class="at">--sjdbGTFfile</span> data/transcriptomics/dvu_intergenic_min100.gff <span class="at">--sjdbGTFfeatureExon</span> intergenic</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p><em>co-cultures</em></p>
+<p><em>cocultures</em></p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -3361,7 +3361,7 @@ color: rgb(100, 99, 255);
 <span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p><em>co-cultures</em></p>
+<p><em>cocultures</em></p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>

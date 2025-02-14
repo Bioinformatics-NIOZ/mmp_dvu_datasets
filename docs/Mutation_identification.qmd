@@ -1,0 +1,187 @@
+---
+title: "Mutation Identification"
+execute:
+  eval: false
+format:  
+  html:
+    embed-resources: true
+    toc: true
+    toc-location: left
+    #css: styles.css
+    format:
+    code-fold: true
+    theme: cosmo 
+    #  dark: darkly
+    #  light: flatly
+    include-in-header: 
+        text: |
+          <style>
+          h1 {
+          color: rgb(0, 0, 200);
+          }
+          h2 {
+          color: rgb(255, 140, 0);
+          }
+          h3 {
+          color: rgb(100, 99, 255);
+          }
+          </style>
+editor: visual
+code-block-bg: true
+code-block-border-left: "#31BAE9"  
+---
+## Download genomes
+
+Prior read sequencing mapping, we need to download the target assemblies for the study.
+
+| NCBI_RefSeq_assembly | Taxon | Strain | Org code |
+|---------------|----------------------------|---------------|---------------|
+| [GCF_000011585.1](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000011585.1/) | *Methanococcus maripaludis S2* | S2 | mmp |
+| [GCF_000195755.1](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000195755.1/) | *Desulfovibrio vulgaris Hildenborough* |Hildenborough | dvu |
+
+: {.striped .hover .light}
+
+## Index genomes with bwa
+
+Create bwa index for the target genomes:
+
+ * M. maripaludis S2 (NCBI RefSeq assembly: GCF_000011585.1) (*mmp*)
+ * N. vulgaris str. Hildenborough (NCBI RefSeq assembly: GCF_000195755.1)(*dvu*)
+
+```{r}
+#mmp
+bwa index -a bwtsw  GCF_000011585.1_ASM1158v1_genomic.fna
+#dvu
+bwa index -a bwtsw  GCF_000195755.1_ASM19575v1_genomic.fna
+```
+
+## Prepare FastQ files for Variant analysis
+
+To prepare FastQ files for variant analysis we followed GATK4 best practices. 
+
+For doing this, first we needed to create a sequence dictionary:
+
+```{bash}
+#mmp
+gatk  CreateSequenceDictionary --REFERENCE genomes/GCF_000011585.1_ASM1158v1_genomic.fna --OUTPUT genomes/GCF_000011585.1_ASM1158v1_genomic.fna.dict
+#dvu
+gatk  CreateSequenceDictionary --REFERENCE genomes/GCF_000195755.1_ASM19575v1_genomic.fna --OUTPUT genomes/GCF_000195755.1_ASM19575v1_genomic.fna.dict
+``` 
+
+Then, using GATK4 reads were converted to sam files, Illumina adapters were identified and new Fastq files mapped against the target genomes using bwa mem. Resultant files were sorted and converted to bam files  
+
+```{bash}
+N_THREADS=20
+for READ1 in rawdata/*1.fastq.gz ; 
+ do  
+  SAMPLE_ID=$(echo $READ1 | awk -F"/" '{print $NF}' | cut -f2-4 -d "_" ); 
+  READ2=$(echo $READ1 | sed 's/1.fastq.gz/2.fastq.gz/');
+  OUT_FNAME=out/${SAMPLE_ID}
+  if [[ $SAMPLE_ID == *'Dvu'* ]]; then
+    GENOME=$(echo  "genomes/GCF_000195755.1_ASM19575v1_genomic.fna")
+    DIC==$(echo  "genomes/GCF_000195755.1_ASM19575v1_genomic.fna.dic")
+  else
+    GENOME=$(echo  "genomes/GCF_000011585.1_ASM1158v1_genomic.fna")
+    DIC=$(echo  "genomes/GCF_000011585.1_ASM1158v1_genomic.fna.dic")
+  fi
+
+  gatk FastqToSam --FASTQ ${READ1} --FASTQ2 ${READ2} --OUTPUT ${OUT_FNAME}.unaligned.bam --SAMPLE_NAME ${SAMPLE_ID} --LIBRARY_NAME ${SAMPLE_ID}.lib  --SORT_ORDER queryname 
+  gatk MarkIlluminaAdapters --INPUT ${OUT_FNAME}.unaligned.bam --OUTPUT ${OUT_FNAME}.adaptMarked.bam --METRICS ${OUT_FNAME}.adaptMarked.metrics.txt 
+  gatk SamToFastq --INPUT ${OUT_FNAME}.adaptMarked.bam --FASTQ ${OUT_FNAME}.interleaved.fastq.gz --CLIPPING_ATTRIBUTE XT --CLIPPING_ACTION 2 --INTERLEAVE true --INCLUDE_NON_PF_READS true 
+
+  bwa mem -K 100000000 -v 3 -t ${N_THREADS} -Y -p GENOME ${OUT_FNAME}.interleaved.fastq.gz >   {OUT_FNAME}.aligned.sam
+  samtools view -h -b {OUT_FNAME}.aligned.sam > ${OUT_FNAME}.aligned.bam
+  gatk MergeBamAlignment --REFERENCE_SEQUENCE ${GENOME} --UNMAPPED_BAM ${OUT_FNAME}.unaligned.bam --ALIGNED_BAM ${OUT_FNAME}.aligned.bam --OUTPUT ${OUT_FNAME}.alnMerged.bam --CREATE_INDEX false --ADD_MATE_CIGAR true --CLIP_ADAPTERS true --CLIP_OVERLAPPING_READS true --INCLUDE_SECONDARY_ALIGNMENTS true --MAX_INSERTIONS_OR_DELETIONS -1 --PRIMARY_ALIGNMENT_STRATEGY BestMapq --ATTRIBUTES_TO_RETAIN XS
+  # or: samtools sort -n -m3G --threads ${N_THREADS} [input] > [output]
+  gatk SortSamSpark --input ${OUT_FNAME}.alnMerged.bam --output ${OUT_FNAME}.bam --sort-order queryname   --verbosity WARNING
+
+done
+```
+
+## QuickVariant analysis
+
+With the resultant sam files, we were able to run the QuickVariant tool for variant identification:
+
+```{bash}
+for file in out/*.sam; do
+  SAMPLE_ID=$(echo $file | awk -F"/" '{print $NF}' | cut -f1-3 - "_");
+  OUT_FNAME=quick_variant/${SAMPLE_ID};
+  if [[ $SAMPLE_ID == *'Dvu'* ]]; then
+      GENOME=$(echo  "genomes/GCF_000195755.1_ASM19575v1_genomic.fna");
+  else
+      GENOME=$(echo  "genomes/GCF_000011585.1_ASM1158v1_genomic.fna");
+  fi; 
+ java -jar ~/utils/quick-variants-1.1.0.jar  --reference ${GENOME} --out-mutations ${OUT_FNAME}_mut.out --out-vcf ${OUT_FNAME}.vcf --vcf-exclude-non-mutations --out-refs-map-count  ${OUT_FNAME}_sum.txt  --out-sam ${OUT_FNAME}.out.sam   --in-ordered-sam $file --num-threads 30 ; 
+done
+```
+
+Output files were used to map the filtered variant coordinates to features on the corresponding GFF file for each target organism:
+
+```{bash}
+#mmp
+for file in Mmp*mut.out ; 
+do
+ sample=$(echo $file | sed 's/_mut.out//');
+ cat $file |\
+   awk 'BEGIN{OFS="\t"; print "CHR\tPOS\tREF\tALT\tDEPTH\tTOTAL_DEPTH\tGFF_start\tGFF_end\tGFF_Desc"}
+     NR==FNR{if(NR>2){h[$2]=$0};next} 
+     $3 ~ "gene"{for(ref in h){
+                    split(h[ref],b,"\t");
+                    if($1==b[1] && ref+0>=$4+0 && ref+0<=$5+0){
+                       print h[ref],$4,$5,$9; 
+                       delete h[ref];
+                     }
+                   }
+                 }
+    END{for(ref in h){
+         print h[ref],"-","-","NO Feature";
+        }
+       }' - ../GCF_000011585.1_ASM1158v1_genomic.no_header.gff > mapped_mut/${sample}.out; 
+done
+
+#dvu
+for file in Dvu*mut.out ; 
+do
+ sample=$(echo $file | sed 's/_mut.out//');
+ cat $file |\
+   awk 'BEGIN{OFS="\t"; print "CHR\tPOS\tREF\tALT\tDEPTH\tTOTAL_DEPTH\tGFF_start\tGFF_end\tGFF_Desc"}
+     NR==FNR{if(NR>2){h[$2]=$0};next} 
+     $3 ~ "gene"{for(ref in h){
+                    split(h[ref],b,"\t");
+                    if($1==b[1] && ref+0>=$4+0 && ref+0<=$5+0){
+                       print h[ref],$4,$5,$9; 
+                       delete h[ref];
+                     }
+                   }
+                 }
+    END{for(ref in h){
+         print h[ref],"-","-","NO Feature";
+        }
+       }' 
+      - ../GCF_000195755.1_ASM19575v1_genomic.no_header.gff > mapped_mut/${sample}.out; done
+```
+
+## Variant annotation
+
+To commplement the results with the effect of the mutations, the effect of the resultant variants was annotated using SnpEff:
+
+```{bash}
+#mmp
+
+ for file in quick_variant/Mmp*_mut.out; do
+  sample=$(echo $file | awk -F"/" '{print $NF}' | sed 's/_mut.out//'); 
+ echo $sample;  cat $file | sed 's/^CHR/#CHR/ ; s/NC_005791.1/Chromosome/' > vcf_snpeff/${sample}.bed;
+ snpeff -v  Methanococcus_maripaludis_s2_gca_000011585 vcf_snpeff/${sample}.bed -s out_snpeff/${sample}.html > out_snpeff/${sample}.log
+ done
+
+
+#dvu
+for file in quick_variant/Dvu*_mut.out;
+ do
+  sample=$(echo $file | awk -F"/" '{print $NF}' | sed 's/_mut.out//');
+   echo $sample;  cat $file | sed 's/^CHR/#CHR/ ; s/NC_002937.3/Chromosome/ ; s/NC_005863.1/pDV/' > vcf_snpeff/${sample}.bed; 
+  snpeff -v  Desulfovibrio_vulgaris_str_hildenborough vcf_snpeff/${sample}.bed -s out_snpeff/${sample}.html > out_snpeff/${sample}.log; 
+done
+
+```
+Notice that chromosome names on the QuickVariant output, need to be renamed to match chromosome names on SnpEff database. 
